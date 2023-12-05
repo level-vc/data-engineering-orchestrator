@@ -20,7 +20,7 @@ def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: di
 
     # Poll job status
     while True:
-        response = batch.describe_jobs(jobs=[job_id])
+        response = batch.describe_jobs(jobs=[job_id], region_name='us-east-2')
         status = response['jobs'][0]['status']
 
         if status == 'SUCCEEDED':

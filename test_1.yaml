@@ -15,7 +15,7 @@ schedule:
   cron: 0 10 * * *
   timezone: null
   day_or: true
-is_schedule_active: null
+is_schedule_active: true
 infra_overrides: {}
 infrastructure:
   type: process
@@ -56,6 +56,6 @@ parameter_openapi_schema:
       type: string
   required: null
   definitions: null
-timestamp: '2023-12-05T11:59:39.122119+00:00'
+timestamp: '2023-12-05T13:22:36.794407+00:00'
 triggers: []
 enforce_parameter_schema: null
