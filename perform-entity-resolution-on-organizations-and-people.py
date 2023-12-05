@@ -8,7 +8,7 @@ from datetime import timedelta
 
 import boto3
 
-@task
+
 def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: dict):
     #batch = boto3.client('batch', region_name='us-east-2')
     aws_credentials = AwsCredentials(
