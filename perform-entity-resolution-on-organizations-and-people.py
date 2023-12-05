@@ -6,13 +6,12 @@ import boto3
 
 @task
 def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: dict):
-    batch = boto3.client('batch')
+    batch = boto3.client('batch', region_name='us-east-2')
     response = batch.submit_job(
         jobName=job_name,
         jobQueue=job_queue,
         jobDefinition=job_definition,
-        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]},
-        region_name='us-east-2'
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]}
     )
     
     # Get JobId from response
@@ -20,7 +19,7 @@ def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: di
 
     # Poll job status
     while True:
-        response = batch.describe_jobs(jobs=[job_id], region_name='us-east-2')
+        response = batch.describe_jobs(jobs=[job_id])
         status = response['jobs'][0]['status']
 
         if status == 'SUCCEEDED':
