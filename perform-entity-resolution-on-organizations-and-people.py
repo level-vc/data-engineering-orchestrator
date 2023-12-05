@@ -1,4 +1,6 @@
 import time
+import os
+os.environ['AWS_REGION'] = 'us-east-2'
 from prefect import flow, task
 from prefect_aws.batch import batch_submit
 from datetime import timedelta
@@ -12,7 +14,6 @@ def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: di
         job_name=job_name,
         job_definition=job_definition,
         job_queue=job_queue,
-        region_name='us-east-2',
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]}
     )
     # response = batch.submit_job(
