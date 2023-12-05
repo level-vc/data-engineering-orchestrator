@@ -30,10 +30,17 @@ async def batch_submit(
     job_id = response["jobId"]
 
     # Wait for the job to complete
-    waiter = batch_client.get_waiter('job_execution_complete')
-    waiter.wait(jobs=[job_id])
+    while True:
+        response = batch_client.describe_jobs(jobs=[job_id])
+        status = response['jobs'][0]['status']
 
-    return job_id
+        if status == 'SUCCEEDED':
+            break
+        elif status == 'FAILED':
+            raise Exception(f'Job {job_id} failed')
+        else:
+            print(f"Job {job_id} is still in {status} status, waiting...")
+            time.sleep(30) # Wait a bit before polling again
 
 @task
 def run_flow():
