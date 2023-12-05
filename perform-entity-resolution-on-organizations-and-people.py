@@ -42,6 +42,7 @@ def run_flow():
 
 env = 'DEV'
 github_branch = 'main'
+env_variables={ "ENV": env, "GITHUB_BRANCH": github_branch }
 
 @flow(log_prints=True)
 def perform_entity_resolution_on_organizations_people(name: str = "world"):
@@ -49,7 +50,7 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
         job_name="copy-from-rds-to-s3",
         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        env={ "ENV": env, "GITHUB_BRANCH": github_branch }
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
     run_flow()
@@ -58,12 +59,12 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
         job_name="er-people",
         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er_people_match_entities",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        env={ "ENV": env, "GITHUB_BRANCH": github_branch }
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
     batch_submit(
         job_name="copy-from-rds-to-s3",
         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        env={ "ENV": env, "GITHUB_BRANCH": github_branch }
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
