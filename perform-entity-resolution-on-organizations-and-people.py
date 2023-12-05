@@ -35,7 +35,7 @@ def run_flow():
     print("Running ER Organizations Flow")
     #return 'success'
 
-env = 'STAGING'
+env = 'DEV'
 github_branch = 'main'
 
 @flow(log_prints=True)
