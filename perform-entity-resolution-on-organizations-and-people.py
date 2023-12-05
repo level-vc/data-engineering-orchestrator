@@ -11,7 +11,8 @@ def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: di
         jobName=job_name,
         jobQueue=job_queue,
         jobDefinition=job_definition,
-        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]}
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]},
+        region_name='us-east-2'
     )
     
     # Get JobId from response
