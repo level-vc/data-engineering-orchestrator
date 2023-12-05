@@ -2,6 +2,7 @@ import time
 import os
 os.environ['AWS_REGION'] = 'us-east-2'
 from prefect import flow, task
+from prefect_aws import AwsCredentials
 from prefect_aws.batch import batch_submit
 from datetime import timedelta
 
@@ -10,10 +11,14 @@ import boto3
 @task
 def batch_submit_job(job_name: str, job_queue: str, job_definition: str, env: dict):
     #batch = boto3.client('batch', region_name='us-east-2')
+    aws_credentials = AwsCredentials(
+        region_name='us-east-2'
+    )
     job_id = batch_submit(
         job_name=job_name,
         job_definition=job_definition,
         job_queue=job_queue,
+        aws_credentials=aws_credentials,
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env.items()]}
     )
     # response = batch.submit_job(
