@@ -44,17 +44,18 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
         }
         workflow_parameters.append(params)
     
-    parameters_map = [
-    {
-        'job_name': f"er-orgs-batch-{params['BATCH_NUMBER']}",
-        'job_queue': "arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        'job_definition': "arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
-        'containerOverrides': {'environment': [{'name': k, 'value': v} for k, v in params.items()]}
-    }
-    for params in workflow_parameters
+    # parameters_map = [
+    # {
+    #     'job_name': f"er-orgs-batch-{params['BATCH_NUMBER']}",
+    #     'job_queue': "arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     'job_definition': "arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
+    #     'containerOverrides': {'environment': [{'name': k, 'value': v} for k, v in params.items()]}
+    # }
+    # for params in workflow_parameters
 ]
-    
-    return parameters_map
+
+    return workflow_parameters    
+    #return parameters_map
 # TASKS
 
 @task
