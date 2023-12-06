@@ -25,7 +25,9 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
     database='entities_relation'
     if env != 'STAGING':
         table_name = table_name + '_' + env.lower()
-    total_batches = wr.athena.read_sql_query(f"SELECT MAX(batch_number) as total_batches FROM {database}.{table_name}", database=database)['total_batches'][0]
+    #total_batches = wr.athena.read_sql_query(f"SELECT MAX(batch_number) as total_batches FROM {database}.{table_name}", database=database)['total_batches'][0]
+    # TEMPORARY
+    total_batches = 5 # 36
     
     batches = [i for i in range(1, total_batches + 1)]
     # TODO - Add range according to max batch size
