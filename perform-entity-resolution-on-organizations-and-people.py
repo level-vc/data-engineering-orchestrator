@@ -59,6 +59,10 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
 # TASKS
 
 @task
+def dummy_task():
+    print("Dummy Task")
+
+@task
 async def batch_submit(
     job_name: str,
     job_queue: str,
@@ -159,7 +163,7 @@ def run_batches_in_paralllel(env, github_branch, run_date):
             job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
             job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
             containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
-        )
+        ).with_task_name(f"er-orgs-batch-{params['BATCH_NUMBER']}")
         job_ids.append(job_id)
     
     batch_submit_check_status_list(job_ids)
