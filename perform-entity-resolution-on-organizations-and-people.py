@@ -41,6 +41,7 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
         'job_name': f"er-orgs-batch-{params['BATCH_NUMBER']}",
         'job_definition': "arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
         'job_queue': "arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        'region_name': 'us-east-2',
         **params
     }
     for params in workflow_parameters
