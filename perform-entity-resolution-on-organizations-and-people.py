@@ -38,7 +38,7 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
         params = {
             'EXECUTION_NAME' : 'orgs-er-batch-' + str(batch) + '-' + str(run_date).replace(':','_'),
             'ENV': env,
-            'RUN_DATE': run_date,
+            #'RUN_DATE': run_date,
             'GITHUB_BRANCH': github_branch,
             'BATCH_NUMBER': str(batch)
         }
@@ -133,6 +133,8 @@ def batch_submit_check_status_list(job_id, region_name='us-east-2'):
         if 'RUNNING' in status or 'PENDING' in status or 'STARTING' in status:
             print(f"There are jobs still running, waiting...")
             #time.sleep(10) # Wait a bit before polling again
+        elif 'FAILED' in status:
+            raise Exception(f'Job {job_id} failed')
         else:
             break
 
