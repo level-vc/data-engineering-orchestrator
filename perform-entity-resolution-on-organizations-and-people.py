@@ -100,12 +100,13 @@ async def batch_submit(
 
     return job_id
 
-@task
+@task(task_run_name="my-dataflow-{task_name}")
 async def batch_submit_parallel(
     job_name: str,
     job_queue: str,
     job_definition: str,
     region_name='us-east-2',
+    task_name='batch_submit_parallel',
     **batch_kwargs,
 ) -> str:
     """
@@ -162,8 +163,9 @@ def run_batches_in_paralllel(env, github_branch, run_date):
             job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
             job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
             job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+            task_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
             containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
-        ).with_task_name(f"er-orgs-batch-{params['BATCH_NUMBER']}")
+        )
         job_ids.append(job_id)
     
     batch_submit_check_status_list(job_ids)
