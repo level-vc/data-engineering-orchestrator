@@ -129,7 +129,7 @@ def perform_entity_resolution_on_organizations(env, github_branch, run_date):
     #         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
     #         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
     #     )
-    batch_submit.map(workflow_parameters[0])
+    batch_submit.map(workflow_parameters)
 
     batch_submit(
         job_name="create-er-organizations-table",
