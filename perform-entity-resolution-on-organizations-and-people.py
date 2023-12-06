@@ -35,7 +35,17 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
             'BATCH_NUMBER': str(batch)
         }
         workflow_parameters.append(params)
-    return workflow_parameters
+    
+    parameters_map = [
+    {
+        'job_name': f"er-orgs-batch-{params['BATCH_NUMBER']}",
+        'job_definition': "arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
+        'job_queue': "arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        **params
+    }
+    for params in workflow_parameters
+]
+    return parameters_map
 # TASKS
 
 @task
@@ -88,30 +98,31 @@ async def batch_submit(
 # er-organizations Step Function
 @flow(log_prints=True)
 def perform_entity_resolution_on_organizations(env, github_branch, run_date):
-    batch_submit(
-        job_name="er-orgs-prepare-input",
-        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-prepare-input",
-        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
-    )
+    # batch_submit(
+    #     job_name="er-orgs-prepare-input",
+    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-prepare-input",
+    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    # )
 
-    batch_submit(
-        job_name="er-orgs-clean-up-data",
-        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-clean-up-er-chunks",
-        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
-    )
+    # batch_submit(
+    #     job_name="er-orgs-clean-up-data",
+    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-clean-up-er-chunks",
+    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    # )
 
     workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
 
     # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
-    for params in workflow_parameters:
-        batch_submit(
-            job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
-            job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
-            job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-            containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
-        )
+    # for params in workflow_parameters:
+    #     batch_submit(
+    #         job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
+    #         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
+    #         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
+    #     )
+    batch_submit.map(workflow_parameters)
 
     batch_submit(
         job_name="create-er-organizations-table",
