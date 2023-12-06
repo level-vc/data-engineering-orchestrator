@@ -58,16 +58,17 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
     #return parameters_map
 # TASKS
 
-@task
+@task(task_run_name="{task_name}")
 def dummy_task():
     print("Dummy Task")
 
-@task
+@task(task_run_name="{task_name}")
 async def batch_submit(
     job_name: str,
     job_queue: str,
     job_definition: str,
     region_name='us-east-2',
+    task_name='batch_submit',
     **batch_kwargs,
 ) -> str:
     """
@@ -100,7 +101,7 @@ async def batch_submit(
 
     return job_id
 
-@task(task_run_name="my-dataflow-{task_name}")
+@task(task_run_name="{task_name}")
 async def batch_submit_parallel(
     job_name: str,
     job_queue: str,
@@ -127,8 +128,8 @@ async def batch_submit_parallel(
 
     return job_id
 
-@task
-def batch_submit_check_status_list(job_id, region_name='us-east-2'):
+@task(task_run_name="{task_name}")
+def batch_submit_check_status_list(job_id, region_name='us-east-2', task_name='batch_submit_check_status_list'):
     batch_client = boto3.client("batch", region_name=region_name)
     # Wait for the job to complete
     while True:
@@ -142,13 +143,6 @@ def batch_submit_check_status_list(job_id, region_name='us-east-2'):
             raise Exception(f'Job {job_id} failed')
         else:
             break
-
-# @task
-# def run_er_organizations_flow(env, github_branch, run_date):
-#     print("Running ER Organizations Flow")
-#     er_organizations_flow = perform_entity_resolution_on_organizations(env, github_branch)
-#     er_organizations_flow.run()
-    #return 'success'
 
 # FLOWS 
 
@@ -168,43 +162,36 @@ def run_batches_in_paralllel(env, github_branch, run_date):
         )
         job_ids.append(job_id)
     
-    batch_submit_check_status_list(job_ids)
+    batch_submit_check_status_list(job_ids, task_name='wait-for-batches-to-complete')
 
 # er-organizations Step Function
 @flow(log_prints=True)
 def perform_entity_resolution_on_organizations(env, github_branch, run_date):
-    # batch_submit(
-    #     job_name="er-orgs-prepare-input",
-    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-prepare-input",
-    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
-    # )
+    batch_submit(
+        job_name="er-orgs-prepare-input",
+        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-prepare-input",
+        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        task_name="er-orgs-prepare-input",
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    )
 
-    # batch_submit(
-    #     job_name="er-orgs-clean-up-data",
-    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-clean-up-er-chunks",
-    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
-    # )
+    batch_submit(
+        job_name="er-orgs-clean-up-data",
+        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-clean-up-er-chunks",
+        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        task_name="er-orgs-clean-up-data",
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    )
 
     #workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
 
     run_batches_in_paralllel(env, github_branch, run_date)
-    # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
-    # for params in workflow_parameters:
-    #     batch_submit(
-    #         job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
-    #         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
-    #         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-    #         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
-    #     )
-
-    #batch_submit.map(workflow_parameters)
 
     batch_submit(
         job_name="create-er-organizations-table",
         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-create-er-table",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        task_name="create-er-organizations-table",
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
@@ -216,8 +203,10 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
     #     job_name="copy-from-rds-to-s3",
     #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
     #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     task_name="copy-from-rds-to-s3",
     #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     # )
+    dummy_task(task_name="copy-from-rds-to-s3")
 
     perform_entity_resolution_on_organizations(ENV, GITHUB_BRANCH, RUN_DATE)
 
@@ -225,6 +214,7 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
         job_name="er-people",
         job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er_people_match_entities",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        task_name="er-people",
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
@@ -232,5 +222,7 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
     #     job_name="copy-from-rds-to-s3",
     #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
     #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     task_name="copy-from-rds-to-s3",
     #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     # )
+    dummy_task(task_name="copy-from-rds-to-s3")
