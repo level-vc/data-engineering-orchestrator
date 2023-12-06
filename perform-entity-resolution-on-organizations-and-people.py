@@ -76,11 +76,11 @@ async def batch_submit(
             time.sleep(30) # Wait a bit before polling again
 
 
-@task
-def run_er_organizations_flow(env, github_branch, run_date):
-    print("Running ER Organizations Flow")
-    er_organizations_flow = perform_entity_resolution_on_organizations(env, github_branch)
-    er_organizations_flow.run()
+# @task
+# def run_er_organizations_flow(env, github_branch, run_date):
+#     print("Running ER Organizations Flow")
+#     er_organizations_flow = perform_entity_resolution_on_organizations(env, github_branch)
+#     er_organizations_flow.run()
     #return 'success'
 
 # FLOWS 
@@ -131,7 +131,7 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
     #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     # )
 
-    run_er_organizations_flow(ENV, GITHUB_BRANCH, RUN_DATE)
+    perform_entity_resolution_on_organizations(ENV, GITHUB_BRANCH, RUN_DATE)
 
     batch_submit(
         job_name="er-people",
