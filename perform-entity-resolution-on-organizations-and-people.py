@@ -3,7 +3,9 @@ from prefect import flow, task
 from datetime import timedelta, datetime
 
 import boto3
-from lvc_engineering import athena
+import awswrangler as wr
+
+#from lvc_engineering import athena
 
 ENV = 'DEV'
 GITHUB_BRANCH = 'main'
@@ -17,7 +19,9 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
     workflow_parameters = []
     table_name = 'cl_organizations_blocks'
     database='entities_relation'
-    total_batches = athena.read_query(f"SELECT MAX(batch_number) as total_batches FROM {database}.{table_name}", database=database, env=env)['total_batches'][0]
+    if env != 'STAGING':
+        table_name = table_name + '_' + env.lower()
+    total_batches = wr.athena.read_sql_query(f"SELECT MAX(batch_number) as total_batches FROM {database}.{table_name}", database=database, env=env)['total_batches'][0]
     
     batches = [i for i in range(1, total_batches + 1)]
     # TODO - Add range according to max batch size
