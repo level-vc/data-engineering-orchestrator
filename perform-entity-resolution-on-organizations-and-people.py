@@ -1,3 +1,7 @@
+import os
+os.environ['AWS_DEFAULT_REGION'] = 'us-east-2'
+os.environ['AWS_REGION'] = 'us-east-2'
+
 import time
 from prefect import flow, task
 from datetime import timedelta, datetime
