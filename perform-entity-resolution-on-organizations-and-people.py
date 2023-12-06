@@ -52,7 +52,7 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
     #     'containerOverrides': {'environment': [{'name': k, 'value': v} for k, v in params.items()]}
     # }
     # for params in workflow_parameters
-]
+    #]
 
     return workflow_parameters    
     #return parameters_map
