@@ -82,7 +82,6 @@ async def batch_submit(
 
     job_id = response["jobId"]
 
-    # Wait for the job to complete
     while True:
         response = batch_client.describe_jobs(jobs=[job_id])
         status = response['jobs'][0]['status']
@@ -95,6 +94,47 @@ async def batch_submit(
             print(f"Job {job_id} is still in {status} status, waiting...")
             time.sleep(30) # Wait a bit before polling again
 
+    return job_id
+
+@task
+async def batch_submit_parallel(
+    job_name: str,
+    job_queue: str,
+    job_definition: str,
+    region_name='us-east-2',
+    **batch_kwargs,
+) -> str:
+    """
+    ...
+    """
+    print("Preparing to submit %s job to %s job queue", job_name, job_queue)
+
+    batch_client = boto3.client("batch", region_name=region_name)
+
+    response = batch_client.submit_job(
+        jobName=job_name,
+        jobQueue=job_queue,
+        jobDefinition=job_definition,
+        **batch_kwargs,
+    )
+
+    job_id = response["jobId"]
+
+    return job_id
+
+@task
+def batch_submit_check_status_list(job_id, region_name='us-east-2'):
+    batch_client = boto3.client("batch", region_name=region_name)
+    # Wait for the job to complete
+    while True:
+        response = batch_client.describe_jobs(jobs=job_id)
+        status = [job['status'] for job in response['jobs']]
+
+        if 'RUNNING' in status or 'PENDING' in status or 'STARTING' in status:
+            print(f"There are jobs still running, waiting...")
+            #time.sleep(10) # Wait a bit before polling again
+        else:
+            break
 
 # @task
 # def run_er_organizations_flow(env, github_branch, run_date):
@@ -110,13 +150,17 @@ def run_batches_in_paralllel(env, github_branch, run_date):
     workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
 
     # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
+    job_ids = []
     for params in workflow_parameters:
-        batch_submit.submit(
+        job_id = batch_submit_parallel.submit(
             job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
             job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
             job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
             containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
         )
+        job_ids.append(job_id)
+    
+    batch_submit_check_status_list(job_ids)
 
 # er-organizations Step Function
 @flow(log_prints=True)
