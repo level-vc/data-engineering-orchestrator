@@ -59,7 +59,7 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
 # TASKS
 
 @task(task_run_name="{task_name}")
-def dummy_task():
+def dummy_task(task_name='dummy_task'):
     print("Dummy Task")
 
 @task(task_run_name="{task_name}")
