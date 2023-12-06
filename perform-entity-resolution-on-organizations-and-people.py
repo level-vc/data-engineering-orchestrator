@@ -4,6 +4,8 @@ os.environ['AWS_REGION'] = 'us-east-2'
 
 import time
 from prefect import flow, task
+from prefect_dask.task_runners import DaskTaskRunner
+
 from datetime import timedelta, datetime
 
 import boto3
@@ -102,6 +104,19 @@ async def batch_submit(
 
 # FLOWS 
 
+@flow(log_prints=True, task_runner=DaskTaskRunner())
+def run_batches_in_paralllel(env, github_branch, run_date):
+    workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
+
+    # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
+    for params in workflow_parameters:
+        batch_submit(
+            job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
+            job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
+            job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+            containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
+        )
+
 # er-organizations Step Function
 @flow(log_prints=True)
 def perform_entity_resolution_on_organizations(env, github_branch, run_date):
@@ -119,8 +134,8 @@ def perform_entity_resolution_on_organizations(env, github_branch, run_date):
     #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     # )
 
-    workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
-
+    #workflow_parameters = build_workflow_parameters(env, github_branch, run_date)
+    run_batches_in_paralllel(env, github_branch, run_date)
     # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
     # for params in workflow_parameters:
     #     batch_submit(
@@ -129,7 +144,7 @@ def perform_entity_resolution_on_organizations(env, github_branch, run_date):
     #         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
     #         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
     #     )
-    batch_submit.map(workflow_parameters)
+    #batch_submit.map(workflow_parameters)
 
     batch_submit(
         job_name="create-er-organizations-table",
