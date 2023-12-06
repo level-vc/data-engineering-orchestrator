@@ -15,7 +15,7 @@ import awswrangler as wr
 
 ENV = 'DEV'
 GITHUB_BRANCH = 'main'
-RUN_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+RUN_DATE = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
 env_variables={ "ENV": ENV, "GITHUB_BRANCH": GITHUB_BRANCH }
 
@@ -34,11 +34,12 @@ def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
     batches = [i for i in range(1, total_batches + 1)]
     # TODO - Add range according to max batch size
     print(batches)
+
     for batch in batches:
         params = {
             'EXECUTION_NAME' : 'orgs-er-batch-' + str(batch) + '-' + str(run_date).replace(':','_'),
             'ENV': env,
-            #'RUN_DATE': run_date,
+            'RUN_DATE': run_date,
             'GITHUB_BRANCH': github_branch,
             'BATCH_NUMBER': str(batch)
         }
@@ -138,7 +139,7 @@ def batch_submit_check_status_list(job_id, region_name='us-east-2', task_name='b
 
         if 'RUNNING' in status or 'PENDING' in status or 'STARTING' in status:
             print(f"There are jobs still running, waiting...")
-            #time.sleep(10) # Wait a bit before polling again
+            time.sleep(10) # Wait a bit before polling again
         elif 'FAILED' in status:
             raise Exception(f'Job {job_id} failed')
         else:
