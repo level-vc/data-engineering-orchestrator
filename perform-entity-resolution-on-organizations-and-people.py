@@ -3,7 +3,6 @@ from prefect import flow, task
 from datetime import timedelta, datetime
 
 import boto3
-import awswrangler as wr
 from lvc_engineering import athena
 
 ENV = 'DEV'
