@@ -1,9 +1,39 @@
 import time
 from prefect import flow, task
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import boto3
+import awswrangler as wr
+from lvc_engineering import athena
 
+ENV = 'DEV'
+GITHUB_BRANCH = 'main'
+RUN_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+env_variables={ "ENV": ENV, "GITHUB_BRANCH": GITHUB_BRANCH }
+
+# UTILS
+
+def build_workflow_parameters(env, github_branch, run_date=RUN_DATE):
+    workflow_parameters = []
+    table_name = 'cl_organizations_blocks'
+    database='entities_relation'
+    total_batches = athena.read_query(f"SELECT MAX(batch_number) as total_batches FROM {database}.{table_name}", database=database, env=env)['total_batches'][0]
+    
+    batches = [i for i in range(1, total_batches + 1)]
+    # TODO - Add range according to max batch size
+    print(batches)
+    for batch in batches:
+        params = {
+            'EXECUTION_NAME' : 'orgs-er-batch-' + str(batch) + '-' + str(run_date).replace(':','_'),
+            'ENV': env,
+            'RUN_DATE': run_date,
+            'GITHUB_BRANCH': github_branch,
+            'BATCH_NUMBER': str(batch)
+        }
+        workflow_parameters.append(params)
+    return workflow_parameters
+# TASKS
 
 @task
 async def batch_submit(
@@ -42,25 +72,63 @@ async def batch_submit(
             print(f"Job {job_id} is still in {status} status, waiting...")
             time.sleep(30) # Wait a bit before polling again
 
+
 @task
-def run_flow():
+def run_er_organizations_flow(env, github_branch, run_date):
     print("Running ER Organizations Flow")
+    er_organizations_flow = perform_entity_resolution_on_organizations(env, github_branch)
+    er_organizations_flow.run()
     #return 'success'
 
-env = 'DEV'
-github_branch = 'main'
-env_variables={ "ENV": env, "GITHUB_BRANCH": github_branch }
+# FLOWS 
 
+# er-organizations Step Function
 @flow(log_prints=True)
-def perform_entity_resolution_on_organizations_people(name: str = "world"):
+def perform_entity_resolution_on_organizations(env, github_branch):
     batch_submit(
-        job_name="copy-from-rds-to-s3",
-        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
+        job_name="er-orgs-prepare-input",
+        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-prepare-input",
         job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
-    run_flow()
+    batch_submit(
+        job_name="er-orgs-clean-up-data",
+        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-clean-up-er-chunks",
+        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    )
+
+    workflow_parameters = build_workflow_parameters(ENV, GITHUB_BRANCH, RUN_DATE)
+
+    # Approximate Map state with a loop (Assuming that 'Map' state runs 5 times)
+    for params in workflow_parameters:
+        batch_submit(
+            job_name=f"er-orgs-batch-{params['BATCH_NUMBER']}",
+            job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-match-entities",
+            job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+            containerOverrides={'environment': [{'name': k, 'value': v} for k, v in params.items()]}
+        )
+
+    batch_submit(
+        job_name="create-er-organizations-table",
+        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/er-organizations-create-er-table",
+        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    )
+
+
+# perform-entity-resolution-on-organizations-and-people Step Function
+@flow(log_prints=True)
+def perform_entity_resolution_on_organizations_people(name: str = "world"):
+    # batch_submit(
+    #     job_name="copy-from-rds-to-s3",
+    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
+    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    # )
+
+    run_er_organizations_flow(ENV, GITHUB_BRANCH, RUN_DATE)
 
     batch_submit(
         job_name="er-people",
@@ -69,9 +137,9 @@ def perform_entity_resolution_on_organizations_people(name: str = "world"):
         containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
     )
 
-    batch_submit(
-        job_name="copy-from-rds-to-s3",
-        job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
-        job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
-        containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
-    )
+    # batch_submit(
+    #     job_name="copy-from-rds-to-s3",
+    #     job_definition="arn:aws:batch:us-east-2:058442094236:job-definition/copy-overwrites-RDS-tables-to-Athena",
+    #     job_queue="arn:aws:batch:us-east-2:058442094236:job-queue/etl-queue",
+    #     containerOverrides={'environment': [{'name': k, 'value': v} for k, v in env_variables.items()]}
+    # )
