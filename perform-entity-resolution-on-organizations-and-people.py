@@ -97,8 +97,7 @@ async def batch_submit(
         elif status == 'FAILED':
             raise Exception(f'Job {job_id} failed')
         else:
-            print(f"Job {job_id} is still in {status} status, waiting...")
-            time.sleep(30) # Wait a bit before polling again
+            time.sleep(60) # Wait a bit before polling again
 
     return job_id
 
@@ -139,7 +138,7 @@ def batch_submit_check_status_list(job_id, region_name='us-east-2', task_name='b
 
         if 'RUNNING' in status or 'PENDING' in status or 'STARTING' in status:
             print(f"There are jobs still running, waiting...")
-            time.sleep(10) # Wait a bit before polling again
+            time.sleep(30) # Wait a bit before polling again
         elif 'FAILED' in status:
             raise Exception(f'Job {job_id} failed')
         else:
